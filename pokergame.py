@@ -50,14 +50,14 @@ class Hand:
                 "acting_player" : self.players["IP"],
                 "actions" : {
                     "Call" : "Showdown",
-                    "Fold" : "IP_Win"
+                    "Fold" : "OP_Win"
                 }
             },
             "IP_Bet" : {
                 "acting_player" : self.players["OP"],
                 "actions" : {
                     "Call" : "Showdown",
-                    "Fold" : "OP_Win"
+                    "Fold" : "IP_Win"
                 }
             }
         }
@@ -130,8 +130,7 @@ class Hand:
         
         self.output_msg.append(msg)
         self.state = self.states[self.state]["actions"][action]
-
-    
+        
     def showdown(self):
         for player in self.players.values():
             self.output_msg.append(f"{player.name} shows {player.card.rank}")
