@@ -74,6 +74,7 @@ class Hand:
         if len(self.output_msg) > 0:
             for msg in self.output_msg:
                 print(msg)
+            print(f"Pot is {self.pot}")
             print("------------------")
             time.sleep(1)
             self.output_msg = []
@@ -85,8 +86,6 @@ class Hand:
             player.stack_size += -self.ante
             self.pot += self.ante
             self.output_msg.append(f"{player.name} is {pos}")
-        
-        self.output_msg.append(f"Pot is {self.pot}")
         
         self.state = "Open"
         
@@ -130,8 +129,6 @@ class Hand:
                 msg = f"{acting_player.name} folds"
         
         self.output_msg.append(msg)
-        self.output_msg.append(f"Pot is {self.pot}")
-        
         self.state = self.states[self.state]["actions"][action]
 
     
