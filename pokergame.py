@@ -1,4 +1,4 @@
-from player import Player
+from pokergame import Player
 import time, random
 
 class Card:
@@ -17,7 +17,7 @@ class Deck:
     def deal(self):
         self.shuffle()
         return self.cards.pop()
-    
+
 class Hand:
     def __init__(self, IP : Player, OP : Player, bet_size : int = 1, ante : int = 1, print_output = True) -> None:
         self.pot : int = 0
@@ -50,14 +50,14 @@ class Hand:
                 "acting_player" : self.players["IP"],
                 "actions" : {
                     "Call" : "Showdown",
-                    "Fold" : "OP_Win"
+                    "Fold" : "IP_Win"
                 }
             },
             "IP_Bet" : {
                 "acting_player" : self.players["OP"],
                 "actions" : {
                     "Call" : "Showdown",
-                    "Fold" : "IP_Win"
+                    "Fold" : "OP_Win"
                 }
             }
         }
@@ -74,7 +74,6 @@ class Hand:
         if len(self.output_msg) > 0:
             for msg in self.output_msg:
                 print(msg)
-            
             print("------------------")
             time.sleep(1)
             self.output_msg = []
@@ -129,7 +128,6 @@ class Hand:
                 acting_player.stack_size -= self.bet_size
             case "Fold":
                 msg = f"{acting_player.name} folds"
-        
         
         self.output_msg.append(msg)
         self.output_msg.append(f"Pot is {self.pot}")
