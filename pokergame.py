@@ -1,4 +1,4 @@
-from pokergame import Player
+from player import Player
 import time, random
 
 class Card:
@@ -14,7 +14,7 @@ class Deck:
     def shuffle(self):
         random.shuffle(self.cards)
 
-    def deal(self):
+    def deal(self) -> Card:
         self.shuffle()
         return self.cards.pop()
 
