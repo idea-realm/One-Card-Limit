@@ -1,4 +1,5 @@
-from pokergame import Hand, HumanPlayer, ComputerPlayer
+from player import HumanPlayer, ComputerPlayer
+from pokergame import Hand
 from strategy import strategy
 import os, time
 
@@ -7,7 +8,7 @@ if __name__ == "__main__":
     
     players = [
         HumanPlayer("Human", 100),
-        ComputerPlayer("AI", 100, strategy)
+        ComputerPlayer("Computer", 100, strategy)
     ]
 
     for i in range(20):
@@ -17,8 +18,7 @@ if __name__ == "__main__":
         print("~~~~~~~~~~~~~~~~~~~~~~~~~")
         IP = players[i % 2]
         OP = players[(i + 1) % 2]
-        hand = Hand(ante=1, bet_size=1)
-        hand.play_hand(IP, OP)
+        Hand(IP = IP, OP = OP, ante=1, bet_size=1)
         
         time.sleep(3)
         os.system('cls')
