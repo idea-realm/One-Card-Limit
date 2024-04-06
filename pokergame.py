@@ -1,145 +1,145 @@
-from player import Player
-import time, random
+from enum import Enum
+from cards import Card, Deck
+from copy import copy
+import random
 
-class Card:
-    def __init__(self, rank, val):
-        self.rank = rank
-        self.val = val
+class Action(Enum):
+    CHECK = 1
+    RAISE = 2
+    CALL = 3
+    FOLD = 4
 
-class Deck:
-    def __init__(self):
-        card_ranks = ["10", "J", "Q", "K", "A"]
-        self.cards = [Card(rank, val) for val, rank in enumerate(card_ranks, start=2)]
-
-    def shuffle(self):
-        random.shuffle(self.cards)
-
-    def deal(self) -> Card:
-        self.shuffle()
-        return self.cards.pop()
-
-class Hand:
-    def __init__(self, IP : Player, OP : Player, bet_size : int = 1, ante : int = 1, print_output = True) -> None:
-        self.pot : int = 0
-        self.ante = ante
-        self.bet_size = bet_size
-        self.players = {"IP" : IP, "OP" : OP}
+    def __str__(self) -> str:
+        return self.name.lower()
+    
+class Player:
+    def __init__(self, name: str = None, card: Card = None):
+        self.name = name
+        self.card = card
+        self.stack_size = 0
         
-        self.print_output = print_output
-        self.output_msg : list[str] = []
+    def decide_action(self, options: list[Action]):
+        return random.choice(options)
+    
+    def __repr__(self):
+        string = f"Player({self.name}, {self.card}, {self.stack_size})"
+        return string
+    
+    def __str__(self) -> str:
+        return f"{self.name}: {self.stack_size}, Card: {self.card}"
         
-        self.state : str = None
+class HumanPlayer(Player):
+    def __init__(self, name: str = None, card: Card = None):
+        super().__init__(name, card)
+        
+    def decide_action(self, options: list[Action]) -> Action:
+        print(f"You have {self.card}")
+        while True:
+            for i, action in enumerate(options, start=1):
+                print(f"{i}. {action.name}")
+            try:
+                selection = int(input("Select an action: "))
+                if 1 <= selection <= len(options):
+                    print("---------------------")
+                    return options[selection - 1]
+                else:
+                    print("Please select a valid action.")
+            except ValueError:
+                print("Please enter a number.")          
+     
+class Hand():
+    def __init__(self, players: list[Player], deck_size: int = 5, max_raises: int = 1) -> None:    
+        self.players = players
+        self.max_raises = max_raises
+        self.raise_size = 1
+        self.pot = 0
+        self.curr_bet = 0
+        self.raises = 0
+        self.acting_pos = 0
         self.is_over = False
+        self.winner : int
+        self.actions : list[Action] = []
+
+        # deal cards if player cards not provided
+        self.deck = Deck(size=deck_size)
+
+        for player in self.players:
+            player.card = self.deck.deal()
+            player.stack_size += -1
+            self.pot += 1
         
-        self.states = {
-            "Open" : {
-                "acting_player" : self.players["OP"],
-                "actions" : {
-                    "Check" : "OP_Check",
-                    "Bet" : "OP_Bet"
-                }
-            },
-            "OP_Check" : {
-                "acting_player" : self.players["IP"],
-                "actions" : {
-                    "Check" : "Showdown",
-                    "Bet" : "IP_Bet"
-                }
-            },
-            "OP_Bet" : {
-                "acting_player" : self.players["IP"],
-                "actions" : {
-                    "Call" : "Showdown",
-                    "Fold" : "OP_Win"
-                }
-            },
-            "IP_Bet" : {
-                "acting_player" : self.players["OP"],
-                "actions" : {
-                    "Call" : "Showdown",
-                    "Fold" : "IP_Win"
-                }
-            }
-        }
+    def get_options(self) -> list[Action]:
+        """Returns valid Actions given hand state"""
+        options = [Action.CHECK, Action.RAISE]
+        if self.actions:                            
+            if self.actions[-1] == Action.RAISE:
+                options = [Action.CALL, Action.FOLD]
+                if self.raises < self.max_raises:
+                    options.append(Action.RAISE)
+        return options
         
-        self.play_hand()
-    
-    def acting_player(self) -> Player:
-        return self.states[self.state]["acting_player"]
-    
-    def avail_actions(self) -> list[str]:
-        return list(self.states[self.state]["actions"].keys())
-    
-    def disp_output(self):
-        if len(self.output_msg) > 0:
-            for msg in self.output_msg:
-                print(msg)
-            print(f"Pot is {self.pot}")
-            print("------------------")
-            time.sleep(1)
-            self.output_msg = []
+    def handle_action(self, action: Action):
+        """Updates Hand state based on action"""
+        if action == Action.RAISE: 
+            self.pot += self.raise_size + self.curr_bet
+            self.players[self.acting_pos].stack_size += -(self.raise_size + self.curr_bet)
+            self.curr_bet = self.raise_size
+            self.raises += 1
+            self.raise_size *= 2
+        elif action == Action.CALL:
+            self.pot += self.curr_bet
+            self.players[self.acting_pos].stack_size += -self.curr_bet
+            self.get_payouts()
+        elif action == Action.CHECK and self.acting_pos == 1:
+            self.get_payouts()
+        elif action == Action.FOLD:
+            self.get_payouts()
+        
+        self.actions.append(action)
+        self.acting_pos = len(self.actions) % 2
+        
+    def get_payouts(self):
+        """Gets winner, updates player stack sizes"""
+        #if folded then winner is other player, else winner is higher card
+        if self.actions[-1] == Action.FOLD:
+            self.winner = (self.acting_pos + 1) % 2
+        else:
+            self.winner = max([0,1], key = lambda pos: self.players[pos].card.val)
+        #award pot to winning p
+        self.players[self.winner].stack_size += self.pot
+        self.is_over = True
     
     def play_hand(self):
-        deck = Deck()
-        for pos, player in self.players.items():
-            player.card = deck.deal() 
-            player.stack_size += -self.ante
-            self.pot += self.ante
-            self.output_msg.append(f"{player.name} is {pos}")
-        
-        self.state = "Open"
-        
+        """Plays hand"""
         while not self.is_over:
-            
-            if self.print_output:
-                self.disp_output()
-            
-            actions = self.avail_actions()
-            curr_player = self.acting_player()
-            action = curr_player.decide_action(self.state, actions)
+            options = self.get_options()
+            action = self.players[self.acting_pos].decide_action(options)
             self.handle_action(action)
-         
-            if self.state == "Showdown":
-                self.is_over = True
-                self.showdown()
-            
-            elif self.state in ["IP_Win","OP_Win"]:
-                self.is_over = True
-                winner = self.players[self.state[:2]]
-                self.end_hand(winner)
+            self.dealer_message()
 
-            if self.print_output:
-                self.disp_output()
+    def __str__(self) -> str:
+        state =  f"{self.players[0].card}, {self.players[1].card}, {[action.name.lower() for action in self.actions]}"
+        if self.is_over:
+            state += str(self.players[0].stack_size)
+        return state
+    
+    def dealer_message(self):
+        if self.actions:
+            last_action = self.actions[-1]
+            last_player = self.players[(self.acting_pos + 1) % 2]
+            match last_action:
+                case Action.CHECK:
+                    print(f"{last_player.name} checks")
+                case Action.CALL:
+                    print(f"{last_player.name} calls {self.curr_bet}")
+                case Action.RAISE:
+                    print(f"{last_player.name} raises to {self.raise_size}, {self.curr_bet} to call")
+                case Action.FOLD:
+                    print(f"{last_player.name} folds")
             
-            
-    def handle_action(self, action):
-        acting_player = self.acting_player()
-        match action:
-            case "Check":
-                msg = f"{acting_player.name} checks"
-            case "Bet":
-                msg = f"{acting_player.name} bets {self.bet_size}"
-                self.pot += self.bet_size
-                acting_player.stack_size -= self.bet_size
-            case "Call":
-                msg = f"{acting_player.name} calls"
-                self.pot += self.bet_size
-                acting_player.stack_size -= self.bet_size
-            case "Fold":
-                msg = f"{acting_player.name} folds"
+        if self.is_over:    
+            if last_action != Action.FOLD:
+                print(f"{self.players[0].name} shows {self.players[0].card}. {self.players[1].name} shows {self.players[1].card}")
+            print(f"{self.players[self.winner].name} wins pot of {self.pot}")
         
-        self.output_msg.append(msg)
-        self.state = self.states[self.state]["actions"][action]
-        
-    def showdown(self):
-        for player in self.players.values():
-            self.output_msg.append(f"{player.name} shows {player.card.rank}")
-        if self.players["IP"].card.val > self.players["OP"].card.val:
-            self.end_hand(self.players["IP"])
-        else:
-            self.end_hand(self.players["OP"])
-            
-    def end_hand(self, winner):
-        self.output_msg.append(f"{winner.name} wins pot of {self.pot}")
-        winner.stack_size += self.pot    
         
