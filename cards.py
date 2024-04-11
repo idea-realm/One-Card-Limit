@@ -19,6 +19,9 @@ class Card:
     def __eq__(self, __value: object) -> bool:
         return self.val == __value
     
+    def __hash__(self):
+        return hash((self.rank, self.val, self.suit))
+    
 class Deck:
     def __init__(self, size: int = None, suited = False):
         card_ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
@@ -43,3 +46,6 @@ class Deck:
 
     def __str__(self) -> str:
         return "Deck(" + f"{[str(card) for card in self.cards]})" 
+
+    def __iter__(self) -> None:
+        return iter(self.cards)

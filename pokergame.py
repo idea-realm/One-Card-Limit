@@ -1,6 +1,5 @@
 from enum import Enum
 from cards import Card, Deck
-from copy import copy
 import random
 
 class Action(Enum):
@@ -141,5 +140,3 @@ class Hand():
             if last_action != Action.FOLD:
                 print(f"{self.players[0].name} shows {self.players[0].card}. {self.players[1].name} shows {self.players[1].card}")
             print(f"{self.players[self.winner].name} wins pot of {self.pot}")
-        
-        
