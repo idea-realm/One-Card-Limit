@@ -1,6 +1,7 @@
 from cards import Card, Deck
 from enum import Enum
-import random
+from typing import Tuple
+import random, time
 
 class Action(Enum):
     CHECK = 1
@@ -10,27 +11,30 @@ class Action(Enum):
     def __str__(self) -> str:
         return self.name.lower()
     def __repr__(self) -> str:
-        return self.name.lower() + "(" + str(self.value) + ")"
-
-class Player:
+        if self.name == "CHECK":
+            return "x"
+        else:
+            return self.name.lower()[0]
+        
+class HandPlayer:
     def __init__(self, pos: int, card: Card, stack: int) -> None:
         self.pos = pos
         self.card = card
         self.stack = stack
         self.name = ["OP", "IP"][self.pos]
-    
+
     def __eq__(self, __value: object) -> bool:
         return (self.card == __value.card) and (self.stack == __value.stack) and (self.pos == __value.pos)
     def __hash__(self) -> int:
         return hash((self.pos, self.card, self.stack))
     def __str__(self) -> str:
-        return ",".join([self.name, str(self.card), str(self.stack)])
+        return self.name
     
-class HandState:
-    def __init__(self, cards: tuple[Card], actions: list[Action] = [], max_raises: int = 2) -> None:
+class HandState:  
+    def __init__(self, cards: Tuple[Card], actions: Tuple[Action] = [], max_raises: int = 2) -> None:
         ante = 1
         self.cards = cards
-        self.players = tuple([Player(i, self.cards[i], -ante) for i in [0,1]])
+        self.players = tuple([HandPlayer(i, self.cards[i], -ante) for i in [0,1]])
         self.actions = actions
         self.max_raises = max_raises
         self.pot = 2 * ante
@@ -42,7 +46,7 @@ class HandState:
         self.result: int
         self.acting_pos = 0
         
-        if self.actions:    
+        if self.actions:
             for action in self.actions:
                 
                 if action == Action.RAISE:
@@ -69,8 +73,10 @@ class HandState:
                     self.result = self.players[0].stack
                 
                 self.acting_pos = (self.acting_pos + 1) % 2
-        
+    
     def get_next_state(self, action: Action) -> 'HandState':
+        if action not in self.get_valid_actions():
+            raise ValueError(f"Invalid action: {action.name}")
         new_actions = self.actions + [action]
         return HandState(self.cards, new_actions)
     
@@ -102,7 +108,12 @@ class HandState:
         return state
 
     def __repr__(self) -> str:
-        return f"HandState({self.players[0].card.rank}, {self.players[1].card.rank}, {self.actions}, {self.players[0].stack}, {self.players[1].stack})"
+        cards = [str(player.card) for player in self.players]
+        actions = [repr(action) for action in self.actions]
+        state_string = cards + actions
+        if self.is_over:
+            state_string += "->" + str(self.result)
+        return f"handstate({''.join(state_string)})"
 
     def dealer_message(self) -> None:
         if self.actions:
@@ -122,10 +133,16 @@ class HandState:
             
         if self.is_over:    
             if last_action != Action.FOLD:
-                print(f"{self.players[0]} shows {self.players[0].card}. {self.players[1]} shows {self.players[1].card}")
+                print("---SHOWDOWN---")
+                msg = [f"{player.name} shows {player.card}" for player in self.players] 
+                print(*msg, sep="\n")
+                time.sleep(2)
+                print("--------------")
             print(f"{self.players[self.winner]} wins pot of {self.pot}")
+        
+        time.sleep(3)
 
-class Agent():
+class Agent:
     def __init__(self, pos: int, name: str = None):
         self.pos = pos
         if name:
@@ -135,12 +152,13 @@ class Agent():
         
     def decide_action(self, state: HandState) -> Action:
         pass
-        
+     
 class Human(Agent):
     def __init__(self, pos: int, name: str = None):
         super().__init__(pos, name)
         
     def decide_action(self, state: HandState) -> Action:
+        print("---------------------")
         print(f"You have {state.players[self.pos].card}")
         options = state.get_valid_actions()
         while True:
@@ -165,12 +183,14 @@ class Computer(Agent):
         options = state.get_valid_actions()
         return random.choice(options)
 
-class Hand():
+class Game:
     def __init__(self, deck_size: int, max_raises: int) -> None:
         self.deck = Deck(deck_size)
         self.max_raises = max_raises
         self.card_combos = [(c1,c2) for c1 in self.deck for c2 in self.deck if c1 != c2]
-         
+        self.game_tree = self.get_game_tree()
+        self.all_states = self.get_all_states()
+        
     def play_hand(self, OP: Agent, IP: Agent) -> HandState:
         players = [OP,IP]
         cards = (self.deck.deal(), self.deck.deal())
@@ -182,20 +202,40 @@ class Hand():
         state.dealer_message()
         return state
         
-    def get_game_tree(self) -> dict:
-        
-        def game_tree(state: HandState):        
+    def get_game_tree(self, state: HandState = None) -> dict:
+        if isinstance(state, HandState):
             if state.is_over:
                 return state
+        
             state_dict = {}
             for option in state.get_valid_actions():
-                state_dict[option] = game_tree(state.get_next_state(option))
+                state_dict[option] = self.get_game_tree(state.get_next_state(option))
             return {state : state_dict}
         
-        tree = {}
-        for cards in self.card_combos:
-            tree[cards] = game_tree(HandState(cards, max_raises= self.max_raises))
-        return tree
+        else:
+            result = {}
+            for combo in self.card_combos:
+                this_combo = HandState(combo, [], max_raises = self.max_raises)
+                result.update(self.get_game_tree(this_combo))
+            return result
         
+    def get_all_states(self, state: HandState = None) -> list[HandState]:
+        if isinstance(state, HandState):
+            if state.is_over:
+                return [state]
         
-    
+            all_states = []
+            for option in state.get_valid_actions():
+                next_state = state.get_next_state(option)
+                all_states.append(next_state)
+                all_states += self.get_all_states(next_state) 
+            return all_states
+            
+        else:
+            result = []
+            for combo in self.card_combos:
+                this_combo = HandState(combo, [], max_raises = self.max_raises)
+                combo_states = self.get_all_states(this_combo)
+                result.extend(combo_states)
+                
+            return result
