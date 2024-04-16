@@ -2,10 +2,16 @@
 import random
 
 class Card:
-    def __init__(self, val, rank, suit = None):
-        self.rank : str = rank
-        self.val : int = val
-        self.suit : str = suit
+    def __init__(self, rank, suit = None):
+        card_ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+        card_suits = ["d","h","c","s"]
+        if rank in card_ranks: 
+            self.rank : str = rank
+            self.val : int = card_ranks.index(rank)
+        if suit is None or suit in card_suits:
+            self.suit : str = suit
+        else:
+            return ValueError  
 
     def __str__(self) -> str:
         if self.suit:
@@ -31,9 +37,9 @@ class Deck:
             size = len(card_ranks) * len(card_suits)   
         if suited:
             size *= 4
-            cards = [Card(val, rank, suit) for val, rank in enumerate(card_ranks) for suit in card_suits]
+            cards = [Card(rank, suit) for rank in enumerate(card_ranks) for suit in card_suits]
         else:
-            cards = [Card(val, rank) for val, rank in enumerate(card_ranks)]
+            cards = [Card(rank) for rank in card_ranks]
             
         self.cards = cards[-size:]
     
@@ -43,7 +49,11 @@ class Deck:
     def deal(self) -> Card:
         self.shuffle()
         return self.cards.pop()
-
+    
+    def deal_hand(self, num_cards: int, num_players: int):
+        cards = [tuple([self.deal() for _ in range(num_cards)]) for _ in range(num_players)]
+        return tuple(cards)
+    
     def __str__(self) -> str:
         return "Deck(" + f"{[str(card) for card in self.cards]})" 
 
