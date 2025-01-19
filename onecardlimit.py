@@ -1,6 +1,6 @@
 from cards import Card, Deck
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, Dict
 import random, time
 
 class Action(Enum):
@@ -15,7 +15,7 @@ class Action(Enum):
             return "x"
         else:
             return self.name.lower()[0]
-        
+
 class HandPlayer:
     def __init__(self, pos: int, card: Card, stack: int) -> None:
         self.pos = pos
@@ -25,16 +25,18 @@ class HandPlayer:
 
     def __eq__(self, __value: object) -> bool:
         return (self.card == __value.card) and (self.stack == __value.stack) and (self.pos == __value.pos)
+    
     def __hash__(self) -> int:
         return hash((self.pos, self.card, self.stack))
+   
     def __str__(self) -> str:
         return self.name
-    
+
 class HandState:  
-    def __init__(self, cards: Tuple[Card], actions: Tuple[Action] = [], max_raises: int = 2) -> None:
+    def __init__(self, cards: Tuple[Card], stacks: Tuple[int, int], actions: Tuple[Action] = [], max_raises: int = 2) -> None:
         ante = 1
         self.cards = cards
-        self.players = tuple([HandPlayer(i, self.cards[i], -ante) for i in [0,1]])
+        self.players = tuple([HandPlayer(i, self.cards[i], stacks[i] - ante) for i in [0,1]])
         self.actions = actions
         self.max_raises = max_raises
         self.pot = 2 * ante
@@ -48,7 +50,6 @@ class HandState:
         
         if self.actions:
             for action in self.actions:
-                
                 if action == Action.RAISE:
                     self.pot += self.raise_size + self.curr_bet
                     self.players[self.acting_pos].stack -= (self.raise_size + self.curr_bet)
@@ -70,7 +71,7 @@ class HandState:
                     else:
                         self.winner = (self.acting_pos + 1) % 2
                     self.players[self.winner].stack += self.pot
-                    self.result = self.players[0].stack
+                    self.result = self.players[0].stack - stacks[0]
                 
                 self.acting_pos = (self.acting_pos + 1) % 2      
     
@@ -78,7 +79,7 @@ class HandState:
         if action not in self.get_valid_actions():
             raise ValueError(f"Invalid action: {action.name}")
         new_actions = self.actions + [action]
-        return HandState(self.cards, new_actions)
+        return HandState(self.cards, (self.players[0].stack, self.players[1].stack), new_actions)
     
     def get_valid_actions(self) -> tuple[Action]:
         if not self.actions or self.actions[-1] == Action.CHECK:
@@ -153,7 +154,7 @@ class Agent:
         
     def decide_action(self, state: HandState) -> Action:
         pass
-     
+
 class Human(Agent):
     def __init__(self, pos: int, name: str = None):
         super().__init__(pos, name)
@@ -175,14 +176,37 @@ class Human(Agent):
             except ValueError:
                 print("Please enter a number.")          
 
+class Strategy:
+    def __init__(self, action_probabilities: Dict[HandState, Dict[Action, float]]):
+        self.action_probabilities = action_probabilities
+
+    def get_action_probabilities(self, state: HandState) -> Dict[Action, float]:
+        return self.action_probabilities.get(state, {})
+
+    def __str__(self) -> str:
+        result = []
+        for state, actions in self.action_probabilities.items():
+            action_strs = [f"{action}: {prob:.2f}" for action, prob in actions.items()]
+            result.append(f"{state}: {{{', '.join(action_strs)}}}")
+        return "\n".join(result)
+    
+    def __repr__(self) -> str:
+        return str(self.action_probabilities)
+    
+    
 class Computer(Agent):
-    def __init__(self, pos: int, name: str = None, strategy = None):
+    def __init__(self, pos: int, name: str = None, strategy: Strategy = None):
         self.strategy = strategy
         super().__init__(pos, name)
     
     def decide_action(self, state: HandState) -> Action:
-        options = state.get_valid_actions()
-        return random.choice(options)
+        if self.strategy:
+            action_probabilities = self.strategy.get_action_probabilities(state)
+            actions, probabilities = zip(*action_probabilities.items())
+            return random.choices(actions, probabilities)[0]
+        else:
+            options = state.get_valid_actions()
+            return random.choice(options)
 
 class Game:
     def __init__(self, deck_size: int, max_raises: int) -> None:
@@ -192,10 +216,10 @@ class Game:
         self.game_tree = self.get_game_tree()
         self.all_states = self.get_all_states()
         
-    def play_hand(self, OP: Agent, IP: Agent) -> HandState:
+    def play_hand(self, OP: Agent, IP: Agent, stacks: Tuple[int, int]) -> HandState:
         players = [OP,IP]
         cards = (self.deck.deal(), self.deck.deal())
-        state = HandState(cards, max_raises = self.max_raises)
+        state = HandState(cards, stacks, max_raises = self.max_raises)
         while not state.is_over:
             state.dealer_message()
             next_action = players[state.acting_pos].decide_action(state)
@@ -216,7 +240,7 @@ class Game:
         else:
             result = {}
             for combo in self.card_combos:
-                this_combo = HandState(combo, [], max_raises = self.max_raises)
+                this_combo = HandState(combo, (0, 0), [], max_raises = self.max_raises)
                 result.update(self.get_game_tree(this_combo))
             return result
         
@@ -235,7 +259,7 @@ class Game:
         else:
             result = []
             for combo in self.card_combos:
-                this_combo = HandState(combo, [], max_raises = self.max_raises)
+                this_combo = HandState(combo, (0, 0), [], max_raises = self.max_raises)
                 combo_states = self.get_all_states(this_combo)
                 result.extend(combo_states)
                 

@@ -3,7 +3,7 @@ import random
 
 class Card:
     def __init__(self, rank, suit = None):
-        card_ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+        card_ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
         card_suits = ["d","h","c","s"]
         if rank in card_ranks: 
             self.rank : str = rank
@@ -30,7 +30,7 @@ class Card:
     
 class Deck:
     def __init__(self, size: int = None, suited = False):
-        card_ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+        card_ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
         card_suits = ["d","h","c","s"]
         
         if size is None:

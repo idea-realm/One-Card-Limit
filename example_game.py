@@ -17,7 +17,7 @@ def start_game():
         print("Exiting...")
         return
     deck_size = get_user_input("Choose a deck size: ", int, lambda x: x > 0 and x < 14, "Deck size must be between 3 and 13")
-    max_raises = get_user_input("Enter maximum number of raises: ", int, lambda x: x >= 0, "Maximum number of raises must be a non-negative integer.")
+    max_raises = get_user_input("Enter maximum number of raises: ", int, lambda x: x >= 1, "Maximum number of raises must be greater than 1")
 
     print(f"Starting game with deck size {deck_size} and maximum {max_raises} raises.")
     hand_num = 0
@@ -29,7 +29,7 @@ def start_game():
         
         print("Game is running...")
         game_players = (Human(0,"OP"),Computer(1,"IP"))
-        hand = hand.play_hand(game_players[hand_num % 2], game_players[(hand_num + 1) % 2])
+        hand = hand.play_hand(game_players[hand_num % 2], game_players[(hand_num + 1) % 2], tuple(stacks))
         stacks[0] += hand.result
         stacks[1] -= hand.result
         
