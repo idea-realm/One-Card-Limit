@@ -1,7 +1,7 @@
 # core/strategy.py
 import random
 from .action import Action
-from .state import HandState, GameRules
+from .state import HandState
 
 class Strategy:
     def __init__(self, policy: dict[HandState, dict[Action, float]] = {}):
