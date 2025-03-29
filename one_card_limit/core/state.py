@@ -145,3 +145,21 @@ class HandState:
 
     def clone(self):
         return deepcopy(self)
+    
+    def encode(self) -> dict:
+        """
+        Encodes the hand state into a string representation. This is for model training.
+        The encoding includes the game rules, acting player card, and actions taken.    
+        """
+        encoded_state = {
+            "deck_size" : str(self.game_rules.deck_size),
+            "raises_allowed" : str(self.game_rules.num_raises_allowed),
+            "acting_player_card" : str(self.players[self.acting_pos].card),
+            "actions_taken" : ''.join([str(action) for action in self.actions_taken]),
+            "is_over" : '1' if self.is_over else '0',
+            "acting_player_stack" : str(self.players[self.acting_pos].stack)
+        }
+            
+        return encoded_state
+    
+    

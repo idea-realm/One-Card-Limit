@@ -111,7 +111,6 @@ class OneCardLimitGame:
         if self.state.raises_made < self.game_rules.num_raises_allowed:
             new_bet = self.state.current_bet * 2
             self.state.current_bet = new_bet
-            self.message.append(f"{self.acting_player.name} raises to {new_bet}.")
             self.state.pot += new_bet
             self.acting_player.stack -= new_bet
             self.state.raises_made += 1
@@ -146,7 +145,7 @@ class OneCardLimitGame:
         This method sets the is_over flag to True and determines the winner based on the players' cards.
         """
         self.players[self.state.winner].stack += self.state.pot  # Add the pot to the winning player's stack
-        self.message.append(f"Player {self.state.winner} wins the pot of {self.state.pot}.")
+        self.message.append(f"Player {self.players[self.state.winner].name} wins the pot of {self.state.pot}.")
             
     def toggle_player(self) -> None:
         """

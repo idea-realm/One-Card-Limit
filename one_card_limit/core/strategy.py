@@ -26,21 +26,3 @@ class Strategy:
                 return action
         return list(action_probs.keys())[-1]
 
-class HumanStrategy(Strategy):
-    def __init__(self):
-        super().__init__()
-
-    def get_action(self, state: HandState) -> Action:
-        valid_actions = state.valid_actions
-        print(f"Your card: {state.players[state.acting_pos].card}")
-        print(f"Valid actions: {', '.join([action.name for action in valid_actions])}")
-        while True:
-            try:
-                action_str = input("Enter your action: ").strip().upper()
-                action = Action[action_str]
-                if action in valid_actions:
-                    return action
-                else:
-                    print("Invalid action. Please choose a valid action.")
-            except KeyError:
-                print("Invalid action. Please enter a valid action.")
