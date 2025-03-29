@@ -6,17 +6,25 @@ from .action import Action
 
 class OneCardLimitGame:
     def __init__(self, deck_size: int, num_raises_allowed: int, ante: int = 1):
-        self.game_rules = GameRules(deck_size, num_raises_allowed, ante)
-        self.state = HandState(self.game_rules)  # Initialize the hand state with game rules 
-        self.message_log = list[str]()
-        self.history = list[HandState]()
-        self.state.players = [
-            PlayerState(pos=0),  # OP
-            PlayerState(pos=1)   # IP
+        game_rules = GameRules(deck_size, num_raises_allowed, ante)
+        players = [
+            PlayerState(0),
+            PlayerState(1)
         ]
+        self.state = HandState(game_rules, players)
+        self.history : list[HandState] = []
+        self.message : list[str] = []
+        
+    @property
+    def game_rules(self) -> GameRules:
+        """
+        Returns the game rules.
+        This property allows access to the game rules of the current game state.
+        """
+        return self.state.game_rules
     
     @property
-    def players(self):
+    def players(self) -> list[PlayerState]:
         """
         Returns the list of players in the game.
         This property allows access to the players in the game state.
@@ -32,33 +40,37 @@ class OneCardLimitGame:
         return self.state.is_over
     
     @property
-    def acting_pos(self):
-        return self.state.acting_pos
-    
-    @property
-    def acting_player_name(self):
-        return self.players[self.state.acting_pos].name
+    def acting_player(self):
+        """
+        Returns the player who is currently acting.
+        This property retrieves the player based on the acting position in the hand state.
+        """
+        return self.players[self.state.acting_pos]
     
     def start_hand(self):
         self.deal_cards()
-        self.message_log.append(f"Both players ante {self.game_rules.ante}.")
+        self.message.append(f"Both players ante {self.game_rules.ante}.")
         self.history.append(self.state.clone())
-
-    def next_action(self, action: Action):
-        if self.is_complete:
+    
+    def deal_cards(self):
+        deck = Deck(self.game_rules.deck_size)
+        deck.shuffle()
+        for player in self.players:
+            player.card = deck.deal_card()
+            player.stack -= self.game_rules.ante
+            self.state.pot += self.game_rules.ante
+    
+    def next_action(self, action: Action): 
+        """
+        Process the next action taken by the player.
+        This method updates the game state based on the action taken by the player.
+        """
+        if self.state.is_over:
             raise ValueError("Game is over")
         self.process_action(action)
         self.history.append(self.state.clone())
 
-    def deal_cards(self):
-        deck = Deck(self.game_rules.deck_size)
-        deck.shuffle()
-        for i, player in enumerate(self.players):
-            self.players[i].card = deck.deal_card()
-            self.players[i].stack -= self.game_rules.ante
-            self.state.pot += self.game_rules.ante
-
-    def process_action(self, action: Action) -> Optional[str]:
+    def process_action(self, action: Action) -> None:
         self.state.actions_taken.append(action)
         match action:
             case Action.CHECK:
@@ -73,7 +85,7 @@ class OneCardLimitGame:
                 self.handle_fold()
         
     def handle_check(self) -> Optional[str]:
-        self.message_log.append(f"{self.acting_player_name} checks.")
+        self.message.append(f"{self.acting_player.name} checks.")
         if len(self.state.actions_taken) >= 2 and self.state.actions_taken[-2] == Action.CHECK:
             self.state.is_over = True
             return self.showdown()
@@ -82,42 +94,42 @@ class OneCardLimitGame:
 
     def handle_bet(self) -> Optional[str]:
         self.state.current_bet = self.game_rules.ante
-        self.message_log.append(f"{self.acting_player_name} bets {self.state.current_bet}.")
         self.state.pot += self.state.current_bet
-        self.players[self.acting_pos].stack -= self.state.current_bet
+        self.acting_player.stack -= self.state.current_bet
+        self.message.append(f"{self.acting_player.name} bets {self.state.current_bet}.")
         self.toggle_player()
         return None
 
     def handle_call(self) -> Optional[str]:
-        self.message_log.append(f"{self.acting_player_name} calls {self.state.current_bet}.")
         self.state.pot += self.state.current_bet
-        self.players[self.state.acting_pos].stack -= self.state.current_bet
+        self.acting_player.stack -= self.state.current_bet
+        self.message.append(f"{self.acting_player.name} calls {self.state.current_bet}.")
         self.state.is_over = True
         return self.showdown()
 
-    def handle_raise(self) -> Optional[str]:
+    def handle_raise(self) -> None:
         if self.state.raises_made < self.game_rules.num_raises_allowed:
             new_bet = self.state.current_bet * 2
             self.state.current_bet = new_bet
-            self.message_log.append(f"{self.acting_player_name} raises to {new_bet}.")
+            self.message.append(f"{self.acting_player.name} raises to {new_bet}.")
             self.state.pot += new_bet
-            self.players[self.state.acting_pos].stack -= new_bet
+            self.acting_player.stack -= new_bet
             self.state.raises_made += 1
+            self.message.append(f"{self.acting_player.name} raises to {new_bet}.")
             self.toggle_player()
             return None
         else:
             raise ValueError("No raises left, can't raise")
 
-    def handle_fold(self) -> Optional[str]:
+    def handle_fold(self) -> None:
         self.state.is_over = True
-        self.message_log.append(f"{self.acting_player_name} folds.")
+        self.message.append(f"{self.acting_player.name} folds.")
         self.state.winner = (self.state.acting_pos + 1) % 2
         return self.end_hand()
 
     def showdown(self) -> Tuple[str, int]:
         self.state.is_over = True
-        print("Entering showdown...")  # For debugging purposes
-        self.message_log.append(
+        self.message.append(
             f"Showdown:\n"
             f"{self.players[0].name} shows {self.players[0].card}\n"
             f"{self.players[1].name} shows {self.players[1].card}."
@@ -133,9 +145,20 @@ class OneCardLimitGame:
         Ends the current hand and determines the winner.
         This method sets the is_over flag to True and determines the winner based on the players' cards.
         """
-        
         self.players[self.state.winner].stack += self.state.pot  # Add the pot to the winning player's stack
-        self.message_log.append(f"Player {self.state.winner} wins the pot of {self.state.pot}.")
+        self.message.append(f"Player {self.state.winner} wins the pot of {self.state.pot}.")
             
-    def toggle_player(self):
-        self.state.acting_pos = (self.acting_pos + 1) % 2
+    def toggle_player(self) -> None:
+        """
+        This method switches the acting position between the two players.
+        """
+        self.state.acting_pos = (self.state.acting_pos + 1) % 2
+        
+    def dealer_message(self) -> str:
+        """
+        Returns the dealer message.
+        This message is used to display the action in the game.
+        """
+        message = '\n'.join(self.message)
+        self.message = []  # Clear the message after displaying
+        return message

@@ -52,29 +52,39 @@ class PlayerState:
     
     """
     
-    def __init__(self, pos : int, stack: int = 0, card: Card = None):
+    def __init__(self, pos : int, card: Card = None):
         if pos in [0, 1]:
             self.pos = pos
             self.name = ["OP", "IP"][pos]
         else:
             raise ValueError("Invalid position")
 
-        self.stack = stack
+        self.stack = 0
         self.card = card
         
     def __str__(self):
-        return f"Player {str(self.pos)}: {self.card} ({self.stack})"
+        """
+        Returns a string representation of the player.
+        This method provides a summary of the player's state, including their card and stack size.
+        """
+        return f"{self.name}: {self.card} ({self.stack})"
     
     def __repr__(self):
         return f"PlayerState({self.card}, {self.stack}, {self.pos})"
 
+    def __eq__(self, other):
+        return self.card == other.card and self.stack == other.stack and self.pos == other.pos
+    
+    def __hash__(self):
+        return hash((self.card, self.stack, self.pos))
+    
 class HandState:
     """
     Represents the state of the hand.
     """
-    def __init__(self, game_rules: GameRules):
+    def __init__(self, game_rules: GameRules, players: List[PlayerState]):
         self.game_rules = game_rules
-        self.players : list[PlayerState]  # Two players: OP and IP
+        self.players =  players
         self.acting_pos: int = 0  # OP acts first
         self.actions_taken: list[Action] = []
         self.is_over: bool = False
@@ -110,13 +120,28 @@ class HandState:
         """
         return [player.card for player in self.players]
     
-    
     def __str__(self):
-        actions = "\n".join([str(action) for action in self.actions_taken])
-        return f"Acting Player: {self.acting_pos}\nActions Taken: {actions}\nIs Over: {self.is_over}\nFinal Stacks: {self.stacks}"
+        """
+        Returns a string representation of the hand state.
+        This method provides a summary of the hand state, including player cards and stacks.
+        """
+        return f"""
+        Players:
+            {self.players[0].name}: {self.players[0].card} ({self.players[0].stack})
+            {self.players[1].name}: {self.players[1].card} ({self.players[1].stack})
+        Pot: {self.pot}
+        Current Bet: {self.current_bet}
+        Actions Taken: {self.actions_taken}
+        """
 
     def __repr__(self):
-        return f"HandState({self.cards}, {self.acting_pos}, {self.actions_taken}, {self.is_over}, {self.stacks})"
+        return f"HandState({self.players}, {self.acting_pos}, {self.actions_taken}, {self.is_over})"
+    
+    def __eq__(self, other):
+        return self.players == other.players and self.acting_pos == other.acting_pos and self.actions_taken == other.actions_taken and self.is_over == other.is_over
+    
+    def __hash__(self):
+        return hash((tuple(self.players), self.acting_pos, tuple(self.actions_taken), self.is_over))
 
     def clone(self):
         return deepcopy(self)
