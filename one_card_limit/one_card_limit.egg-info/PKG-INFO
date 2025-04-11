@@ -1,0 +1,81 @@
+Metadata-Version: 2.4
+Name: one_card_limit
+Version: 0.1.0
+Summary: A One Card Limit Poker implementation with AI
+Home-page: https://github.com/yourusername/one_card_limit
+Author: Your Name
+Author-email: your.email@example.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: typing-extensions>=4.0.0
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# One Card Limit Poker
+
+A Python implementation of One Card Limit Poker, featuring both human and AI players.
+
+## Features
+- Configurable deck size (3-13 cards)
+- Adjustable maximum raises (0-2)
+- Human vs Computer gameplay
+- CLI interface
+- Built-in strategy framework
+- Game state logging
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/one_card_limit.git
+cd one_card_limit
+
+# Install in development mode
+pip install -e .
+```
+
+## Quick Start
+
+```python
+from one_card_limit.interface.game_manager import GameManager
+from one_card_limit.core.state import GameConfig
+
+# Create game with custom configuration
+config = GameConfig(deck_size=3, max_raises=2, ante=1)
+game = GameManager(initial_stack=100, config=config)
+
+# Play 10 hands
+game.play_session(10)
+```
+
+## Game Rules
+1. Each player is dealt one card
+2. Players take turns betting, raising, or folding
+3. Maximum of 2 raises per betting round
+4. Higher card wins at showdown
+
+## Project Structure
+```
+one_card_limit/
+â”œâ”€â”€ core/         # Core game mechanics
+â”œâ”€â”€ strategy/     # AI strategy implementation
+â”œâ”€â”€ interface/    # User interface components
+â””â”€â”€ utils/        # Utility functions and logging
+```
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)

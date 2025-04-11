@@ -1,4 +1,4 @@
-# core/actions.py
+# core/action.py
 from enum import Enum
 
 class Action(Enum):
@@ -11,7 +11,7 @@ class Action(Enum):
     def __str__(self):
         if self.value == "check":
             return "x"
-        return self.value.lower()
+        return self.value[0].lower()
     
     def __repr__(self):
         return self.value
