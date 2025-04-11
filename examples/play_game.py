@@ -11,7 +11,7 @@ def main():
     )
     
     # Load the trained strategy
-    strategy_path = Path("trained_strategies/cfr_strategy_3card.pkl")
+    strategy_path = Path("one_card_limit\trained_strategies\cfr_strategy_3card.pkl")
     if strategy_path.exists():
         computer_strategy = Strategy.load(strategy_path)
     else:
@@ -22,7 +22,7 @@ def main():
     game = GameManager(
         initial_stack=100,
         config=config,
-        computer_strategy=computer_strategy,  # You'll need to modify GameManager to accept this
+        computer_strategy=computer_strategy,
         log_enabled=True
     )
     
