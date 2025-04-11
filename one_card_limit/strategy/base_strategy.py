@@ -1,13 +1,13 @@
-# strategy/base_strategy.py
+# one_card_limit\strategy\base_strategy.py
 import random
 import pickle
 from pathlib import Path
 from typing import Dict
-from ..core.action import Action
-from ..core.state import HandState, GameConfig
-from ..core.game_logic import get_valid_actions
-from .game_tree import build_game_tree
-from .info_set import InfoState, get_info_state
+from one_card_limit.core.action import Action
+from one_card_limit.core.state import HandState, GameConfig
+from one_card_limit.core.game_logic import get_valid_actions
+from one_card_limit.strategy.game_tree import build_game_tree
+from one_card_limit.strategy.info_set import InfoState, get_info_state
 
 class Strategy:
     def __init__(self, config: GameConfig, policy: Dict[InfoState, Dict[Action, float]] = None):
@@ -91,3 +91,6 @@ class Strategy:
         
         return cls(config=data['config'], policy=data['policy'])
 
+def get_strategy_path(config: GameConfig) -> Path:
+    """Generate a strategy file path based on game configuration"""
+    return Path(f"trained_strategies/cfr_strategy_d{config.deck_size}_r{config.max_raises}.pkl")

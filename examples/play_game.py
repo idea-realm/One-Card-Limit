@@ -3,6 +3,10 @@ from one_card_limit.core import GameConfig
 from one_card_limit.strategy import Strategy
 from pathlib import Path
 
+def get_strategy_path(config: GameConfig) -> Path:
+    """Generate a strategy file path based on game configuration"""
+    return Path(f"trained_strategies/cfr_strategy_d{config.deck_size}_r{config.max_raises}.pkl")
+
 def main():
     # Create game with custom configuration
     config = GameConfig(
@@ -10,12 +14,13 @@ def main():
         max_raises=2    # Maximum number of raises allowed (0-2)
     )
     
-    # Load the trained strategy
-    strategy_path = Path("trained_strategies\cfr_strategy_3card.pkl")
+    # Load the trained strategy for this specific configuration
+    strategy_path = get_strategy_path(config)
     if strategy_path.exists():
         computer_strategy = Strategy.load(strategy_path)
     else:
-        print("No trained strategy found, using random strategy")
+        print(f"No trained strategy found for deck_size={config.deck_size}, max_raises={config.max_raises}")
+        print("Using random strategy instead")
         computer_strategy = Strategy(config)
     
     # Initialize game manager with the loaded strategy
@@ -35,3 +40,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
