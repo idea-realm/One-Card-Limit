@@ -26,7 +26,7 @@ def main():
         log_enabled=True
     )
     
-    # Play 10 hands
+    # Play 5 hands
     try:
         game.play_session(5)
     except KeyboardInterrupt:
