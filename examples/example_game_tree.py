@@ -1,6 +1,5 @@
 from one_card_limit.core.state import GameConfig
 from one_card_limit.strategy.game_tree import build_game_tree
-from one_card_limit.strategy.base_strategy import Strategy
 
 
 # Create initial game state with specific cards
@@ -16,7 +15,3 @@ for node in game_tree:
 
 # Print the game tree
 print(game_tree)
-
-strategy = Strategy(config)
-for key, value in strategy.policy.items():
-    print(key, value)
