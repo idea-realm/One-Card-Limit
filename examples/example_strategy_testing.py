@@ -1,10 +1,6 @@
 from one_card_limit.core.state import GameConfig
 from one_card_limit.strategy.cfr_strategy import CFRStrategy
-from pathlib import Path
-
-def get_strategy_path(config: GameConfig) -> Path:
-    """Generate a strategy file path based on game configuration"""
-    return Path(f"trained_strategies/cfr_strategy_d{config.deck_size}_r{config.max_raises}.pkl")
+from one_card_limit.strategy.base_strategy import get_strategy_path
 
 # Configure the game
 config = GameConfig(deck_size=3, max_raises=1)
