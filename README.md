@@ -15,7 +15,7 @@ One Card Limit Poker is a simplified poker variant where:
 2. Both players ante a small amount (default is 1)
 3. The player to act first is designated as OP (out of position), the player second to act is IP (in position)
 4. Players take turns betting with the following options:
-   -- Check, if no bet was made
+   - Check, if no bet was made
    - Bet, if no bet was made (bet size is same value as the ante)
    - Raise, facing a bet (raise size is 2 times the current bet)
    - Call, match the currnt bet
