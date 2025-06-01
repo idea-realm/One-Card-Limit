@@ -23,7 +23,7 @@ One Card Limit Poker is a simplified poker variant where:
 
 ```bash
 # Clone the repository
-git clone https://github.com/idea-realm/Simple-Poker-Game.git
+git clone https://github.com/idea-realm/One-Card-Limit.git
 cd one_card_limit
 
 # Install in development mode
@@ -107,12 +107,11 @@ one_card_limit/
 ```
 
 ## Features
-- Configurable deck size (3-13 cards)
-- Adjustable maximum raises (0-2)
 - Human vs Computer gameplay via CLI
 - Built-in strategy framework
 - Counterfactual Regret Minimization (CFR) implementation
 - Game state logging
+- Configurable deck size (3-13 cards) and Adjustable maximum raises (0-2)
 - Extensible architecture for new strategies
 
 ## Development
@@ -120,11 +119,6 @@ one_card_limit/
 Install development dependencies:
 ```bash
 pip install -r requirements-dev.txt
-```
-
-Run tests:
-```bash
-pytest
 ```
 
 ## License
