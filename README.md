@@ -2,23 +2,32 @@
 
 A Python implementation of One Card Limit Poker, featuring both human and AI players. This project implements a simplified poker variant that's well-suited for studying the game theory of poker and training AI strategies.
 
+## Features
+- Human vs Computer gameplay via CLI
+- Built-in strategy framework
+- Counterfactual Regret Minimization (CFR) implementation
+- Game state logging
+
 ## Game Rules
 
 One Card Limit Poker is a simplified poker variant where:
-1. Each player is dealt one card from a deck of N cards (default N=3)
-2. Players take turns betting with the following options:
-   - Check (when no bet is made)
-   - Bet/Raise (up to a maximum number of raises)
-   - Call (match the current bet)
-   - Fold (give up the hand)
-3. After betting is complete, the player with the higher card wins
-4. Maximum raises can be configured (default is 2)
+1. 2 players are each dealt a card from a deck of size N, ranging from N = 3 {A, K, Q} to N = 13 {A, K, Q, ..., 2}
+2. Both players ante a small amount (default is 1)
+3. The player to act first is designated as OP (out of position), the player second to act is IP (in position)
+4. Players take turns betting with the following options:
+   -- Check, if no bet was made
+   - Bet, if no bet was made (bet size is same value as the ante)
+   - Raise, facing a bet (raise size is 2 times the current bet)
+   - Call, match the currnt bet
+   - Fold, give up the hand
+5. After betting is complete, the player with the higher card wins
+6. Maximum raises can be configured (default is 2)
 
-### Betting Structure
-- Each hand starts with a small ante (default 1 chip)
-- Bet size is same as the ante, raise is double the current bet
-- Example hand: Both players Ante 1 chip (pot=2) → OP Bets 1 chip (pot=3) → IP Raises 2 chips (pot=5) → OP Calls 2 chips (pot=7) : Winning Player gets pot (7 chips, net win of 6 chips after ante)
-
+### Example hand:
+- OP is dealt A, IP is dealt Q, both players Ante 1 chip (pot=2)
+- OP Bets 1 chip (pot=3) → IP Raises 2 chips (pot=5) → OP Calls 2 chips (pot=7)
+- OP wins (A > Q) pot of 7 chips (net win of 6 chips after ante)
+  
 ## Installation
 
 ```bash
@@ -106,13 +115,7 @@ one_card_limit/
 └── utils/        # Utility functions and logging
 ```
 
-## Features
-- Human vs Computer gameplay via CLI
-- Built-in strategy framework
-- Counterfactual Regret Minimization (CFR) implementation
-- Game state logging
-- Configurable deck size (3-13 cards) and Adjustable maximum raises (0-2)
-- Extensible architecture for new strategies
+
 
 ## Development
 
