@@ -1,13 +1,20 @@
+# interface/game_manager.py
+"""
+`GameManager` is responsible for managing the flow of a one-card poker game between a human player and a computer opponent. It handles game initialization, card dealing, action processing, stack updates, and logging.
+"""
+# Standard Imports
 from typing import Optional
-from ..core.state import GameConfig, HandState
-from ..core.card import Deck
-from ..core.game_logic import process_action
+# Local Imports
+from .cli import get_human_action
+from ..core.state import Action, GameConfig, HandState
+from ..core.game_logic import process_action, deal_cards
 from ..strategy.base_strategy import Strategy
 from ..utils.logger import GameLogger
 
 class GameManager:
-    """Manages the game flow between human and computer players"""
-    
+    """
+    Manages the game flow between human and computer players
+    """
     def __init__(self, 
                  initial_stack: int = 100,
                  config: Optional[GameConfig] = None,
@@ -15,6 +22,7 @@ class GameManager:
                  log_enabled: bool = True):
         """Initialize the game manager with the given configuration and strategy"""
         self.config = config or GameConfig(deck_size=3, max_raises=2, ante=1)
+        self.initial_stack = initial_stack
         self.human_stack = initial_stack
         self.computer_stack = initial_stack
         self.human_pos = 1  # Start human as IP
@@ -24,8 +32,8 @@ class GameManager:
     def play_hand(self) -> None:
         """Play a single hand of the game"""
         # Initialize hand
-        state = HandState(self.config)
-        self._deal_cards(state)
+        state = HandState.create_new_hand(self.config)
+        deal_cards(state)
         
         self.logger.log_hand_start()
         
@@ -53,17 +61,9 @@ class GameManager:
             
         self.logger.log_session_end(self.human_stack, self.computer_stack)
     
-    def _deal_cards(self, state: HandState) -> None:
-        """Deal cards to both players"""
-        deck = Deck(self.config.deck_size)
-        deck.shuffle()
-        state.players[0].card = deck.deal_card()
-        state.players[1].card = deck.deal_card()
-    
-    def _get_action(self, state: HandState):
+    def _get_action(self, state: HandState) -> Action:
         """Get action from current player (human or computer)"""
         if state.acting_pos == self.human_pos:
-            from .cli import get_human_action
             return get_human_action(state)
         else:
             action = self.computer.get_action(state)

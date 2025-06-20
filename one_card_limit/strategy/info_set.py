@@ -1,9 +1,15 @@
 # strategy/info_set.py
+"""
+This module defines the `InfoState` class and the `get_info_state` function, 
+which are used to represent and extract a player's knowledge of the game state 
+in a one-card limit poker game.
+"""
+
+# Standard Imports
 from dataclasses import dataclass, field
 from typing import Optional, List
-from ..core.card import Card
-from ..core.state import HandState
-from ..core.action import Action
+# Local Imports
+from ..core.state import Card, Action, HandState
 
 @dataclass
 class InfoState:
@@ -17,12 +23,13 @@ class InfoState:
     result: Optional[int] = None
     
     @property
-    def actions(self) -> List[str]:
+    def actions(self) -> str:  # Changed return type to match implementation
         return "".join([str(action) for _, action in self.actions_taken])
     
     def __str__(self) -> str:
         encoded = f"{self.card}"
-        encoded += f"-{self.actions}"        
+        if self.actions != "":
+            encoded += f"-{self.actions}"        
         if self.result is not None:            
             encoded += f"-({str(self.result)})"       
         return encoded
@@ -30,7 +37,7 @@ class InfoState:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.__str__())
 
 def get_info_state(state: HandState, pos: int) -> InfoState:

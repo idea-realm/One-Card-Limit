@@ -1,13 +1,23 @@
-from ..core.state import HandState
-from ..core.action import Action
+# utils/logger.py
+"""
+This module provides the `GameLogger` class, which is responsible for logging events
+in a simple poker game. It includes methods to log the start and end of a game session,
+details of each hand, player actions, and the final results.
+"""
+
+# Standard Imports
 from time import sleep
+# Local Imports
+from ..core.state import Action, HandState
 
 class GameLogger:
-    """Handles logging of game events"""
-    def __init__(self, stack_size: int):
-        self.stack_size = stack_size
-        self.human_starting_stack = stack_size
-        self.computer_starting_stack = stack_size
+    """
+    Handles logging of game events
+    """
+    def __init__(self, initial_stack: int):
+        self.initial_stack = initial_stack
+        self.human_starting_stack = initial_stack
+        self.computer_starting_stack = initial_stack
 
     def log_session_start(self, human_stack: int, computer_stack: int) -> None:
         print("\n=== New Game Session ===")
@@ -24,6 +34,7 @@ class GameLogger:
     
     def log_hand_start(self) -> None:
         print(f"Cards dealt, Antes Posted")
+        sleep(2)
     
     def log_state(self, state: HandState) -> None:
         print(f"Pot is: {state.pot}, Current bet: {state.current_bet}")

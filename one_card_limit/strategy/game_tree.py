@@ -1,9 +1,15 @@
+# strategy/game_tree.py
+"""
+This module defines the game tree structure for a simplified poker game.
+It includes the `GameNode` class, which represents nodes in the game tree,
+and functions to build and traverse the tree.
+"""
+# Standard Imports
 from dataclasses import dataclass
 from typing import Dict
 from itertools import permutations
-from ..core.state import HandState, GameConfig
-from ..core.card import Deck
-from ..core.action import Action
+# Local Imports
+from ..core.state import Action, Deck, HandState, GameConfig
 from ..core.game_logic import get_valid_actions, process_action
 from .info_set import InfoState, get_info_state
 
@@ -30,9 +36,7 @@ class GameNode:
         return self.children is None or len(self.children) == 0
 
     def build_children(self) -> None:
-        """
-        Builds the children nodes for all valid actions from this state.
-        """
+        """Builds the children nodes for all valid actions from this state."""
         
         # If the game is over, there are no children
         if self.state.is_over:
@@ -42,7 +46,7 @@ class GameNode:
         
         # If cards are not dealt, build children for all possible card combinations
         if not self.state.cards_dealt:
-            deck = Deck(self.state.game_rules.deck_size)
+            deck = Deck(self.state.config.deck_size)
             for cards in permutations(deck.cards, 2):
                 new_state = self.state.clone()
                 new_state.players[0].card = cards[0]
@@ -82,7 +86,7 @@ def build_game_tree(config: GameConfig) -> GameNode:
     Builds a game tree for the given game configuration.
     Returns the root node of the tree.
     """
-    state = HandState(game_rules=config)
+    state = HandState(config=config)
     root = GameNode(state)
     
     def build_recursive(node: GameNode) -> None:

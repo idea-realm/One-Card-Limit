@@ -1,24 +1,39 @@
-# game_logic.py
+# core/game_logic.py
+"""
+This module contains the core game logic for a simple one-card poker game. It provides functions to manage the game state, 
+handle player actions, and determine the outcome of a hand. The game logic includes dealing cards, validating actions, 
+processing player actions, and finalizing the hand.
+"""
+
+# Standard Imports
 from typing import List
-from .state import HandState
-from .card import Deck
-from .action import Action
+# Local Imports
+from .state import HandState, Action, Deck
 
 def deal_cards(state: HandState) -> None:
-    deck = Deck(state.game_rules.deck_size)
+    """
+    Assigns cards to players if none dealt.
+    """
+    if state.cards_dealt:
+        return ValueError("Cards already dealt.")
+    
+    deck = Deck(state.config.deck_size)
     deck.shuffle()
     for player in state.players:
         player.card = deck.deal_card()
     return None
 
 def get_valid_actions(state: HandState) -> List[Action]:
+    """
+    Returns a list of valid actions for the acting player of the hand
+    """
     if not state.cards_dealt or state.is_over:
         return []
     if state.current_bet == 0:
         return [Action.CHECK, Action.BET]
     else:
         valid = [Action.CALL, Action.FOLD]
-        if state.raises_made < state.game_rules.max_raises:
+        if state.raises_made < state.config.max_raises:
             valid.append(Action.RAISE)
         return valid
 
@@ -57,7 +72,6 @@ def process_action(state: HandState, action: Action) -> None:
     # If the hand is over, finalize outcomes
     if state.is_over:
         return end_hand(state)
-        
 
 def handle_check(state: HandState) -> None:
     if state.acting_pos == 1:
@@ -68,7 +82,7 @@ def handle_check(state: HandState) -> None:
         return None
 
 def handle_bet(state: HandState) -> None:
-    state.current_bet = state.game_rules.ante
+    state.current_bet = state.config.ante
     state.pot += state.current_bet
     state.acting_player.stack -= state.current_bet
     return None
@@ -80,7 +94,7 @@ def handle_call(state: HandState) -> None:
     state.showdown = True
 
 def handle_raise(state: HandState) -> None:
-    if state.raises_made < state.game_rules.max_raises:
+    if state.raises_made < state.config.max_raises:
         new_bet = state.current_bet * 2
         state.current_bet = new_bet
         state.pot += new_bet
