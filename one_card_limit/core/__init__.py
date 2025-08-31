@@ -6,7 +6,6 @@ __all__ = [
     'Card',
     'Deck',
     'GameConfig',
+    'InfoState',
     'HandState',
-    'process_action',
-    'get_valid_actions',
 ]

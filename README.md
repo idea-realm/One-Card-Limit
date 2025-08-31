@@ -1,176 +1,117 @@
-# One Card Limit Poker (Work in Progress)
+# One Card Limit Poker
 
-A Python implementation of One Card Limit Poker, featuring game theory analysis and AI strategy development. This project implements a simplified poker variant that's well-suited for studying poker fundamentals and experimenting with game-theoretic algorithms.
+A Python implementation of One Card Limit Poker, featuring both human and AI players. This project implements a simplified poker variant that's well-suited for studying the game theory of poker and training AI strategies.
 
-## Current Status
-🚧 **This project is a work in progress** 🚧
-
-Currently implemented:
-- ✅ Core game mechanics and state management
-- ✅ Strategy framework with Policy class
-- ✅ Counterfactual Regret Minimization (CFR) implementation
-- ✅ Game tree building and information set handling
-- ✅ Strategy training and serialization
-
-In development:
-- 🔄 Command-line interface for human vs AI gameplay
-- 🔄 Game session management
-- 🔄 Comprehensive testing and validation
+## Features
+- Human vs Computer gameplay via CLI
+- Built-in strategy framework
+- Counterfactual Regret Minimization (CFR) implementation
+- Game state logging
 
 ## Game Rules
 
 One Card Limit Poker is a simplified poker variant where:
-1. 2 players are each dealt a card from a deck of size N (configurable from 3 to 13 cards)
-2. Both players ante a small amount (default is 1 chip)
-3. The first player to act is designated as OP (out of position), the second is IP (in position)
-4. Players take turns with these betting options:
-   - **Check**: Pass if no bet has been made
-   - **Bet**: Make the first bet (equal to ante size)
-   - **Raise**: Increase the bet (raise size configurable)
-   - **Call**: Match the current bet
-   - **Fold**: Give up the hand
-5. After betting, the player with the higher card wins the pot
-6. Maximum number of raises is configurable (0-2)
+1. 2 players are each dealt a card from a deck of size N, ranging from N = 3 {A, K, Q} to N = 13 {A, K, Q, ..., 2}
+2. Both players ante a small amount (default is 1)
+3. The player to act first is designated as OP (out of position), the player second to act is IP (in position)
+4. Players take turns betting with the following options:
+   - Check, if no bet was made
+   - Bet, if no bet was made (bet size is same value as the ante)
+   - Raise, facing a bet (raise size is 2 times the current bet)
+   - Call, match the currnt bet
+   - Fold, give up the hand
+5. After betting is complete, the player with the higher card wins
+6. Maximum raises can be configured (default is 2)
 
-### Example Hand:
-- OP dealt A, IP dealt Q, both ante 1 chip (pot = 2)
-- OP bets 1 chip (pot = 3) → IP raises 2 chips (pot = 5) → OP calls 2 chips (pot = 7)
-- OP wins with A > Q, taking the 7-chip pot
-
+### Example hand:
+- OP is dealt A, IP is dealt Q, both players Ante 1 chip (pot=2)
+- OP Bets 1 chip (pot=3) → IP Raises 2 chips (pot=5) → OP Calls 2 chips (pot=7)
+- OP wins (A > Q) pot of 7 chips (net win of 6 chips after ante)
+  
 ## Installation
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd SimplePokerGame
+git clone https://github.com/idea-realm/One-Card-Limit.git
+cd one_card_limit
 
-# Install in development mode
+# Install
 pip install -e .
 ```
 
-## Usage Examples
+## Quick Start
 
-### Training a CFR Strategy
+### Training an AI Strategy
+
+First, train a strategy using Counterfactual Regret Minimization (CFR):
 
 ```python
-from one_card_limit.core.state import GameConfig
-from one_card_limit.strategy.cfr_strategy import CFRStrategy
-from one_card_limit.strategy.base_strategy import get_strategy_path
+from one_card_limit.core import GameConfig
+from one_card_limit.strategy import CFRStrategy
+from pathlib import Path
 
 # Configure the game
-config = GameConfig(deck_size=4, max_raises=2)
+config = GameConfig(deck_size=3, max_raises=2)
 
-# Create and train CFR strategy
-cfr_strategy = CFRStrategy(config)
-cfr_strategy.train(iterations=10000)
+# Create and train the CFR strategy
+cfr = CFRStrategy(config)
+num_iterations = 100000
+
+# Train the strategy
+for i in range(num_iterations):
+    if i % 1000 == 0:
+        print(f"Training progress: {i}/{num_iterations}")
+    cfr._cfr_iteration()
 
 # Save the trained strategy
-strategy_path = get_strategy_path(config)
-cfr_strategy.save(str(strategy_path))
-print(f"Strategy saved to {strategy_path}")
-
-# Show the strategy
-print("\nSample strategies:")
-cfr_strategy.policy.show_by_card()
+strategy_path = Path("trained_strategies/cfr_strategy_3card.pkl")
+strategy_path.parent.mkdir(exist_ok=True)
+cfr.save(strategy_path)
 ```
 
-### Playing Against the AI (CLI Interface)
+### Playing Against the AI
 
-*Note: CLI interface is currently in development*
+After training, you can play against the AI using the command-line interface:
 
 ```python
-from one_card_limit.interface.cli import play_game
-from one_card_limit.core.state import GameConfig
-from one_card_limit.strategy.base_strategy import Strategy
+from one_card_limit.interface import GameManager
+from one_card_limit.core import GameConfig
+from one_card_limit.strategy import Strategy
+from pathlib import Path
 
-# Configure game and load strategy
-config = GameConfig(deck_size=4, max_raises=1)
-computer_strategy = Strategy.create_or_load(config, strategy_type="cfr")
+# Load configuration and strategy
+config = GameConfig(deck_size=3, max_raises=2)
+strategy_path = Path("trained_strategies/cfr_strategy_3card.pkl")
+computer_strategy = Strategy.load(strategy_path) if strategy_path.exists() else Strategy(config)
 
-# Start interactive game session
-play_game(
+# Initialize game
+game = GameManager(
+    initial_stack=100,
     config=config,
     computer_strategy=computer_strategy,
-    initial_stack=100,
-    num_hands=10
+    log_enabled=True
 )
-```
 
-**Example CLI Session:**
-```
-=== One Card Limit Poker ===
-Configuration: 4-card deck, max 1 raise
-Starting stacks: You: 100, Computer: 100
-
-Hand #1
-Your card: K
-Actions: [] (no actions yet)
-Pot: 2 (both players ante 1)
-
-Your turn - Available actions:
-1. Check
-2. Bet (1 chip)
-Enter your choice (1-2): 2
-
-You bet 1 chip. Pot: 3
-Computer's turn...
-Computer raises 2 chips! Pot: 5
-
-Your card: K
-Actions: [BET, RAISE] 
-Current bet to you: 2 chips
-
-Your turn - Available actions:
-1. Call (2 chips)
-2. Fold
-Enter your choice (1-2): 1
-
-You call 2 chips. Pot: 7
-Showdown: Your K vs Computer's A
-Computer wins with A > K
-
-Final result: You: 96, Computer: 104
-Continue? (y/n): y
+# Play 5 hands
+game.play_session(5)
 ```
 
 ## Project Structure
-
 ```
 one_card_limit/
-├── core/                    # Core game mechanics
-│   ├── game_logic.py       # Game rules and action processing
-│   └── state.py            # Game state and configuration
-├── strategy/               # Strategy implementation
-│   ├── base_strategy.py    # Strategy and Policy classes
-│   ├── cfr_strategy.py     # CFR algorithm implementation
-│   ├── game_tree.py        # Game tree construction
-│   └── info_set.py         # Information set representation
-├── interface/              # User interfaces (in development)
-└── examples/               # Example scripts and usage
-    ├── train_strategy.py   # Strategy training example
-    └── show_strategy.py    # Strategy analysis example
+├── core/         # Core game mechanics
+│   ├── game_logic.py  # Core game rules and logic
+│   └── state.py       # Game state management
+├── strategy/     # AI strategy implementation
+│   ├── base_strategy.py  # Base strategy class
+│   ├── cfr_strategy.py  # CFR implementation
+│   ├── game_tree.py     # Game tree builder
+│   └── info_set.py      # Information set representation
+├── interface/    # User interface components
+│   ├── cli.py          # Command line interface
+│   └── game_manager.py # Game flow management
+└── utils/        # Utility functions and logging
 ```
-
-## Configuration Options
-
-The game can be configured with different parameters:
-
-```python
-config = GameConfig(
-    deck_size=4,     # Number of cards (3-13)
-    max_raises=1     # Maximum raises allowed (0-2)
-)
-```
-
-Common configurations:
-- `GameConfig(deck_size=3, max_raises=2)` - Simple 3-card game
-- `GameConfig(deck_size=13, max_raises=1)` - Full deck, limited betting
-- `GameConfig(deck_size=4, max_raises=0)` - 4-card game, bet/call only
-
-## Contributing
-
-This is a work-in-progress project. Contributions, suggestions, and feedback are welcome!
 
 ## License
-
 [MIT](https://choosealicense.com/licenses/mit/)

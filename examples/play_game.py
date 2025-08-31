@@ -1,21 +1,19 @@
 from one_card_limit.interface.game_manager import GameManager
-from one_card_limit.core.state import GameConfig
+from one_card_limit.core.game_logic import GameConfig
 from one_card_limit.strategy.base_strategy import Strategy
 
 def main():
     # Create game with custom configuration
     config = GameConfig(
-        deck_size=4,    # Number of cards in deck (3-13)
-        max_raises=2    # Maximum number of raises allowed (0-2)
+        deck_size=5,    # Number of cards in deck (3-13)
+        max_raises=1    # Maximum number of raises allowed (0-2)
     )
     
     # Use factory method to create or load strategy
     # This will automatically train a new strategy if one doesn't exist
     try:
-        computer_strategy = Strategy.create_or_load(
-            config, 
-            strategy_type="cfr", 
-            train_iterations=5000  # Adjust iterations as needed
+        computer_strategy = Strategy.load(
+            config
         )
     except Exception as e:
         print(f"Error creating strategy: {e}")

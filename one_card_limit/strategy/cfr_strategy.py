@@ -6,32 +6,26 @@ The `CFRStrategy` class can be instantiated with a `GameConfig` object and used 
 """
 
 # Standard Imports 
-import pickle
 from typing import Dict
-from pathlib import Path
 # Local Imports
-from .base_strategy import Strategy, Policy
-from .info_set import InfoState, get_info_state
-from ..core.state import Action, Card, Deck, GameConfig, HandState
-from ..core.game_logic import process_action, deal_cards
+from .base_strategy import Strategy
+from ..core.game_logic import Action, Card, GameConfig, HandState, InfoState
 
-class CFRStrategy(Strategy):
+class CFRStrategy:
     """
     Implementation of Counterfactual Regret Minimization (CFR) for One Card Limit Poker.
     """
     def __init__(self, config: GameConfig) -> None:
-        super().__init__(config)
+        self.config = config
+        self.policy: Dict[InfoState, Dict[Action, float]] = {}
         self.regret_sum: Dict[InfoState, Dict[Action, float]] = {}
         self.strategy_sum: Dict[InfoState, Dict[Action, float]] = {}
         self.iterations = 0
+        self.trained = False
     
-    def train(self, iterations: int = 10000) -> None:
+    def train(self, iterations: int = 10000) -> Strategy:
         """
         Train the CFR strategy for the specified number of iterations.
-        Updates the policy with the average strategy after training.
-        
-        Args:
-            iterations: Number of CFR iterations to run (default: 10000)
         """
         print(f"Training CFR strategy for {iterations} iterations...")
         
@@ -44,9 +38,12 @@ class CFRStrategy(Strategy):
                 print(f"Completed {i + 1}/{iterations} iterations")
         
         # Update policy with the average strategy after training
-        self._update_policy_with_average_strategy()
-        print(f"Training complete! Trained for {self.iterations} total iterations.")
+        avg_strategy_dict = self.get_average_strategy()
         
+        self.policy = avg_strategy_dict
+        print(f"Training complete! Trained for {self.iterations} total iterations.")
+        return Strategy(config=self.config, policy = self.policy)
+
     def _cfr_iteration(self) -> None:
         """
         Run one iteration of CFR training.
@@ -56,27 +53,39 @@ class CFRStrategy(Strategy):
         ip_reach_prob = 1.0
         
         # Create initial game state using factory method
-        initial_state = HandState.create_new_hand(self.config)
-        deal_cards(initial_state)
+        initial_state = HandState(self.config, deal_cards=True)
         
         # Run CFR recursion
         self._cfr_recursive(initial_state, op_reach_prob, ip_reach_prob)
 
     def _cfr_recursive(self, state: HandState, op_reach: float, ip_reach: float) -> Dict[int, float]:
-        """
-        Recursive CFR implementation.
-        Returns expected values for each player.
-        """
+        """ Recursive CFR implementation. Returns expected values for each player."""
+        
         if state.is_over:
             # Terminal state, return utility values
             utilities = {
-                i : state.players[i].stack 
+                i : state.stacks[i] 
                 for i in [0, 1]
             }
             return utilities
 
         player = state.acting_pos
-        info_state = get_info_state(state, state.acting_pos)
+        info_state = state.get_info_state(state.acting_pos)
+        
+        # If this is a new info state, initialize policy
+        if info_state not in self.policy:
+            valid = info_state.valid_actions
+            self.policy[info_state] = {action : 1/len(valid) for action in valid}
+            
+        if info_state not in self.regret_sum:
+            self.regret_sum[info_state] = {
+                action: 0.0 for action in self.policy[info_state].keys()
+            }
+            
+        if info_state not in self.strategy_sum:
+            self.strategy_sum[info_state] = {
+                action: 0.0 for action in self.policy[info_state].keys()
+            }
         
         # Get current strategy through regret matching
         strategy = self.get_strategy(info_state)
@@ -89,7 +98,7 @@ class CFRStrategy(Strategy):
         for action in self.policy[info_state].keys():
             # Create new state after taking action
             new_state = state.clone()
-            process_action(new_state, action)
+            new_state.process_action(action)
             
             # Update reach probabilities
             if player == 0:  # OP
@@ -121,19 +130,12 @@ class CFRStrategy(Strategy):
         """
         ev = 0.0
         iterations = 1000  # Number of iterations for Monte Carlo simulation
+        cards = [None, None]
+        cards[position] = card
         
         for _ in range(iterations):
-            # Create new game state using factory method
-            state = HandState.create_new_hand(self.config)
-            
-            # Deal card to player
-            deck = Deck(self.config.deck_size)
-            deck.shuffle()
-            state.players[position].card = card
-            deck.cards.remove(card)
-            
-            # Deal random card for opponent
-            state.players[1 - position].card = deck.deal_card()
+            # Create new hand with the specified card and position
+            state = HandState.from_cards(self.config, cards)
             
             # Get values using current strategy
             values = self._cfr_recursive(state, 1.0, 1.0)
@@ -141,7 +143,7 @@ class CFRStrategy(Strategy):
             
         return ev / iterations
 
-    def calculate_ev_matrix(self) -> Dict[str, Dict[str, float]]:
+    def calculate_ev_matrix(self) -> Dict[str, Dict[Card, float]]:
         """
         Calculate EV matrix for all possible starting hands and positions.
         """
@@ -150,10 +152,11 @@ class CFRStrategy(Strategy):
             'IP': {}
         }
         
-        deck = Deck(self.config.deck_size)
-        for card in deck.cards:
-            ev_matrix['OP'][str(card)] = self.calculate_ev(card, 0)
-            ev_matrix['IP'][str(card)] = self.calculate_ev(card, 1)
+        deck = self.config.get_deck()
+        # Generate all possible cards in the deck
+        for card in deck:
+            ev_matrix['OP'][card] = self.calculate_ev(card, 0)
+            ev_matrix['IP'][card] = self.calculate_ev(card, 1)
             
         return ev_matrix
     
@@ -166,18 +169,6 @@ class CFRStrategy(Strategy):
             action: The action taken
             regret: The counterfactual regret value
         """
-        # Initialize regret sum dictionary for new info states
-        if info_state not in self.regret_sum:
-            self.regret_sum[info_state] = {
-                action: 0.0 for action in self.policy[info_state].keys()
-            }
-        
-        # Initialize strategy sum dictionary for new info states
-        if info_state not in self.strategy_sum:
-            self.strategy_sum[info_state] = {
-                action: 0.0 for action in self.policy[info_state].keys()
-            }
-        
         # Update regret sum
         self.regret_sum[info_state][action] += regret
         
@@ -186,17 +177,12 @@ class CFRStrategy(Strategy):
         
         # Update strategy sum - accumulate the current strategy
         for a, prob in strategy.items():
-            self.strategy_sum[info_state][a] += prob
-
+            self.strategy_sum[info_state][a] += prob  
+    
     def get_strategy(self, info_state: InfoState) -> Dict[Action, float]:       
         """
         Get current strategy for the given info state using regret matching.
-        This is used during training and returns the current regret-matched strategy.
         """
-        # If this is a new info state, return the policy's uniform strategy
-        if info_state not in self.regret_sum:
-            return self.policy[info_state]
-        
         strategy = {}
         regret_sum = self.regret_sum[info_state]
         
@@ -205,7 +191,7 @@ class CFRStrategy(Strategy):
         for action in self.policy[info_state].keys():
             strategy[action] = max(0, regret_sum[action])
             normalizing_sum += strategy[action]
-        
+            
         # Normalize probabilities
         if normalizing_sum > 0:
             for action in strategy:
@@ -218,83 +204,24 @@ class CFRStrategy(Strategy):
         
         return strategy
 
-    def _update_policy_with_average_strategy(self) -> None:
-        """Update the policy with the average strategy computed from strategy_sum."""
-        for info_state in self.policy.keys():
-            if info_state in self.strategy_sum:
-                strategy_sum = self.strategy_sum[info_state]
-                normalizing_sum = sum(strategy_sum.values())
-                
-                if normalizing_sum > 0:
-                    # Update policy with normalized average strategy
-                    avg_strategy = {
-                        action: sum_prob / normalizing_sum 
-                        for action, sum_prob in strategy_sum.items()
-                    }
-                    self.policy[info_state] = avg_strategy
-                # If normalizing_sum is 0, keep the existing uniform policy
-
     def get_average_strategy(self) -> Dict[InfoState, Dict[Action, float]]:
         """
         Get the average strategy across all iterations.
-        This is mainly for compatibility and debugging purposes.
         """
         avg_strategy = {}
         
-        for info_state in self.policy.keys():
-            if info_state in self.strategy_sum:
-                strategy_sum = self.strategy_sum[info_state]
-                normalizing_sum = sum(strategy_sum.values())
-                
-                if normalizing_sum > 0:
-                    avg_strategy[info_state] = {
-                        action: sum_prob / normalizing_sum 
-                        for action, sum_prob in strategy_sum.items()
-                    }
-                else:
-                    # Use current policy if no accumulated strategy
-                    avg_strategy[info_state] = self.policy[info_state].copy()
+        for info_state, strategy_sum in self.strategy_sum.items():
+            avg_strategy[info_state] = {}
+            normalizing_sum = sum(strategy_sum.values())
+            
+            if normalizing_sum > 0:
+                for action, sum_prob in strategy_sum.items():
+                    avg_strategy[info_state][action] = sum_prob / normalizing_sum
+            
             else:
-                # Use current policy if no strategy sum
-                avg_strategy[info_state] = self.policy[info_state].copy()
+                # If no accumulated strategy (shouldn't happen), use uniform
+                action_count = len(self.policy[info_state])
+                for action in self.policy[info_state].keys():
+                    avg_strategy[info_state][action] = 1.0 / action_count
         
         return avg_strategy
-
-    def save(self, filepath: str) -> None:
-        """
-        Save CFR strategy to a file.
-        """
-        data = {
-            'config': self.config,
-            'policy': self.policy.to_dict(),
-            'regret_sum': self.regret_sum,
-            'strategy_sum': self.strategy_sum,
-            'iterations': self.iterations
-        }
-        
-        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(filepath, 'wb') as f:
-            pickle.dump(data, f)
-
-    @classmethod
-    def load(cls, filepath: str) -> 'CFRStrategy':
-        """
-        Load CFR strategy from a file.
-        
-        Args:
-            filepath: Path to the saved strategy file
-            
-        Returns:
-            CFRStrategy object with loaded state
-        """
-        with open(filepath, 'rb') as f:
-            data = pickle.load(f)
-        
-        strategy = cls(config=data['config'])
-        strategy.policy = Policy.from_dict(data['policy'])
-        strategy.regret_sum = data['regret_sum']
-        strategy.strategy_sum = data['strategy_sum']
-        strategy.iterations = data.get('iterations', 0)
-        
-        return strategy

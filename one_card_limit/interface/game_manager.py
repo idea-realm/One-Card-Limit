@@ -6,8 +6,7 @@
 from typing import Optional
 # Local Imports
 from .cli import get_human_action
-from ..core.state import Action, GameConfig, HandState
-from ..core.game_logic import process_action, deal_cards
+from ..core.game_logic import Action, GameConfig, HandState
 from ..strategy.base_strategy import Strategy
 from ..utils.logger import GameLogger
 
@@ -32,8 +31,8 @@ class GameManager:
     def play_hand(self) -> None:
         """Play a single hand of the game"""
         # Initialize hand
-        state = HandState.create_new_hand(self.config)
-        deal_cards(state)
+        state = HandState(self.config)
+        state.deal_cards()
         
         self.logger.log_hand_start()
         
@@ -41,7 +40,7 @@ class GameManager:
         while not state.is_over:
             self.logger.log_state(state)
             action = self._get_action(state)
-            process_action(state, action)
+            state.process_action(action)
             self.logger.log_action_message(state)
             
         # Update stacks and log results
@@ -71,5 +70,5 @@ class GameManager:
     
     def _update_stacks(self, state: HandState) -> None:
         """Update player stacks based on hand result"""
-        self.human_stack += state.players[self.human_pos].stack
-        self.computer_stack += state.players[(1 - self.human_pos) % 2].stack
+        self.human_stack += state.stacks[self.human_pos]
+        self.computer_stack += state.stacks[(1 - self.human_pos) % 2]

@@ -3,15 +3,14 @@
 This module contains a function, `get_human_action(state: HandState)` that prompts a user to input an action. 
 """
 # Local Imports
-from ..core.state import Action, HandState
-from ..core.game_logic import get_valid_actions
+from ..core.game_logic import Action, HandState
 
 def get_human_action(state: HandState) -> Action:
     """
     Get action from human player via command line
     """
-    print(f"\nYour card: {state.players[state.acting_pos].card}")
-    valid_actions = get_valid_actions(state)
+    print(f"\nYour card: {state.cards[state.acting_pos]}")
+    valid_actions = state.get_valid_actions()
     print(f"Valid actions: {', '.join(a.name for a in valid_actions)}")
     
     while True:
